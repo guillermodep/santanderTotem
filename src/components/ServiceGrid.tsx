@@ -63,7 +63,7 @@ export default function ServiceGrid({ onServiceSelect, onAccessibilityToggle, hi
         flex items-center justify-center gap-3 text-2xl font-bold`}
       >
         <Accessibility size={32} />
-        {highContrast ? 'Desactivar Alto Contraste' : 'Accesibilidad'}
+        {highContrast ? 'Desactivar Accesibilidad' : 'Accesibilidad'}
       </button>
     </div>
   );
