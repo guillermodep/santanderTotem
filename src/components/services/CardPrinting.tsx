@@ -4,8 +4,8 @@ import { CreditCard, Shield, Star } from 'lucide-react';
 export default function CardPrinting() {
   const [selectedCard, setSelectedCard] = useState<'credit' | 'debit' | null>(null);
   const [showCardAnimation, setShowCardAnimation] = useState(false);
-  const [creditCardNumber] = useState(`************${Math.floor(1000 + Math.random() * 9000)}`);
-  const [debitCardNumber] = useState(`************${Math.floor(1000 + Math.random() * 9000)}`);
+  const [creditCardNumber] = useState(`**** **** **** ${Math.floor(1000 + Math.random() * 9000)}`);
+  const [debitCardNumber] = useState(`**** **** **** ${Math.floor(1000 + Math.random() * 9000)}`);
 
   const renderCard = (type: 'credit' | 'debit', isPreview = false, isAnimated = false) => {
     const cardNumber = type === 'credit' ? creditCardNumber : debitCardNumber;
