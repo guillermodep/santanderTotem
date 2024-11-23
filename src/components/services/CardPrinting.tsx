@@ -191,7 +191,7 @@ export default function CardPrinting() {
               }} className="transform transition-all duration-300">
                 <h3 className="text-xl font-bold text-center mb-4 flex items-center justify-center gap-2">
 //                  <Star className="w-6 h-6 text-yellow-500" />
-                  <CreditCard className="w-6 h-6 text-santander-red" />
+                  <CreditCard className="w-6 h-6 text-santander-black" />
                   Tarjeta de Crédito
                 </h3>
                 {renderCard('credit', true)}
