@@ -126,7 +126,7 @@ export default function App() {
             : 'bg-white/90 backdrop-blur-sm text-gray-600'
         } rounded-lg p-4 shadow-lg border border-gray-100 text-center`}>
           <p>
-            Para asistencia, llame al <span className="font-semibold">0800-999-9999</span>
+            Para asistencia, llame al <span className="font-semibold">0810-333-2400</span>
           </p>
         </div>
       </div>
