@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-colors;
+  }
+  
+  .btn-primary {
+    @apply bg-[#EC0000] text-white hover:bg-red-700;
+  }
+}
+
+@keyframes cardPrint {
+  0% {
+    transform: translateY(-200%) translateX(-50%) rotate(-5deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  60% {
+    transform: translateY(-30%) translateX(-50%) rotate(-2deg);
+  }
+  80% {
+    transform: translateY(-10%) translateX(-50%) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) translateX(-50%) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes cardPrintSlow {
+  0% {
+    transform: translateY(-200%) translateX(-50%) rotate(-5deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  70% {
+    transform: translateY(-30%) translateX(-50%) rotate(-2deg);
+  }
+  85% {
+    transform: translateY(-10%) translateX(-50%) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) translateX(-50%) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@layer utilities {
+  .animate-card-print {
+    animation: cardPrint 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .animate-card-print-slow {
+    animation: cardPrintSlow 3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .animate-shine {
+    animation: shine 2s infinite;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 3s infinite;
+  }
+}
