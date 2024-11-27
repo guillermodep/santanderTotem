@@ -6,6 +6,16 @@ import ServiceContent from './components/ServiceContent';
 import VideoOverlay from './components/VideoOverlay';
 import WelcomeModal from './components/WelcomeModal';
 import TicketPrinter from './components/TicketPrinter';
+import { useNavigate, useLocation } from 'react-router-dom';
+import MicIndicator from './components/MicIndicator';
+import SpeechFeedback from './components/SpeechFeedback';
+
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
 
 export default function App() {
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -14,42 +24,143 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [highContrast, setHighContrast] = useState(false);
   const [showTicketPrinter, setShowTicketPrinter] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+  const [isListening, setIsListening] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [recognizedText, setRecognizedText] = useState<string>('');
 
   useEffect(() => {
-    let inactivityTimer: NodeJS.Timeout;
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1' ||
+                       window.location.hostname.includes('192.168.');
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      console.error('El reconocimiento de voz no está soportado en este navegador');
+      return;
+    }
+
+    let recognitionInstance = new SpeechRecognition();
+    let isRecognitionActive = true;
+    
+    // Configuración
+    recognitionInstance.continuous = false; // Cambiado a false
+    recognitionInstance.interimResults = false;
+    recognitionInstance.lang = 'es-ES';
+
+    const startRecognition = () => {
+      if (isRecognitionActive) {
+        try {
+          recognitionInstance.start();
+        } catch (error) {
+          console.error('Error al iniciar el reconocimiento:', error);
+        }
+      }
+    };
+
+    recognitionInstance.onstart = () => {
+      console.log('Reconocimiento iniciado');
+      setIsListening(true);
+    };
+
+    recognitionInstance.onend = () => {
+      console.log('Reconocimiento terminado');
+      // Solo reiniciar si está activo
+      if (isRecognitionActive) {
+        setTimeout(startRecognition, 50);
+      }
+    };
+
+    recognitionInstance.onresult = (event: any) => {
+      const last = event.results.length - 1;
+      const text = event.results[last][0].transcript.toLowerCase();
+      console.log('Texto reconocido:', text);
+      setRecognizedText(text);
+      
+      if (text.includes('hola santander') || text.includes('hola')) {
+        const audioFeedback = new Audio('/beep.mp3');
+        audioFeedback.play().catch(console.error);
+        
+        // Primero cerramos el video
+        setShowVideo(false);
+        
+        // Luego reseteamos los demás estados
+        setSelectedService(null);
+        setIsAuthenticated(false);
+        setShowWelcome(false);
+        setShowTicketPrinter(false);
+        
+        // Finalmente navegamos al home
+        navigate('/');
+      }
+    };
+
+    recognitionInstance.onerror = (event: any) => {
+      console.error('Error en reconocimiento de voz:', event.error);
+      
+      if (event.error === 'not-allowed') {
+        setIsListening(false);
+        isRecognitionActive = false;
+      } else if (event.error === 'network') {
+        // Error de red, intentar reiniciar
+        setTimeout(startRecognition, 1000);
+      } else {
+        // Para otros errores, pequeña pausa antes de reintentar
+        setTimeout(startRecognition, 500);
+      }
+    };
+
+    // Iniciar el reconocimiento
+    startRecognition();
+
+    // Cleanup
+    return () => {
+      isRecognitionActive = false;
+      try {
+        recognitionInstance.stop();
+        setIsListening(false);
+      } catch (error) {
+        console.error('Error al detener el reconocimiento:', error);
+      }
+    };
+  }, []); // Solo se ejecuta una vez al montar el componente
+
+  useEffect(() => {
+    let inactivityTimer: ReturnType<typeof setTimeout>;
 
     const resetTimer = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
-        setIsAuthenticated(false);
-        setSelectedService(null);
-        setTimeout(() => {
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+
+      if (selectedService || location.pathname !== '/') {
+        inactivityTimer = setTimeout(() => {
+          setSelectedService(null);
+          setIsAuthenticated(false);
+          setShowWelcome(false);
+          setShowTicketPrinter(false);
           setShowVideo(true);
-        }, 100);
-      }, 120000); // 2 minutes of inactivity
+          navigate('/');
+        }, 2000);
+      }
     };
 
-    const handleActivity = () => {
-      resetTimer();
-    };
+    const events = [
+      'mousedown',
+      'mousemove',
+      'keypress',
+      'scroll',
+      'touchstart'
+    ];
 
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('mousedown', handleActivity);
-    window.addEventListener('keypress', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+    events.forEach(event => {
+      document.addEventListener(event, resetTimer);
+    });
 
     resetTimer();
-
-    return () => {
-      clearTimeout(inactivityTimer);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('mousedown', handleActivity);
-      window.removeEventListener('keypress', handleActivity);
-      window.removeEventListener('touchstart', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
-    };
-  }, []);
+  }, [selectedService, location.pathname, navigate]);
 
   const handleBack = () => {
     if (selectedService && isAuthenticated) {
@@ -94,6 +205,8 @@ export default function App() {
         ? 'bg-black text-white' 
         : 'bg-gradient-to-b from-santander-bg-primary to-santander-bg-secondary'
     }`}>
+      <MicIndicator isListening={isListening} />
+      <SpeechFeedback text={recognizedText} />
       {showVideo && (
         <VideoOverlay onDismiss={handleVideoDismiss} />
       )}
