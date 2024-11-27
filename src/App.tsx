@@ -52,13 +52,6 @@ export default function App() {
     recognitionInstance.maxAlternatives = 1;
     recognitionInstance.lang = 'es-ES';
 
-    // Ajustar la sensibilidad del reconocimiento
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    analyser.minDecibels = -45; // Aumentar este valor para reducir la sensibilidad
-    analyser.maxDecibels = -10; // Ajustar para ignorar ruidos de fondo
-    analyser.smoothingTimeConstant = 0.85;
-
     const startRecognition = () => {
       if (isRecognitionActive) {
         try {
@@ -105,25 +98,19 @@ export default function App() {
     recognitionInstance.onresult = (event: any) => {
       const last = event.results.length - 1;
       const text = event.results[last][0].transcript.toLowerCase();
-      const confidence = event.results[last][0].confidence;
+      console.log('Texto reconocido:', text);
+      setRecognizedText(text);
       
-      console.log('Texto reconocido:', text, 'Confianza:', confidence);
-      
-      // Solo procesar si la confianza es alta (ignorar ruidos de fondo)
-      if (confidence > 0.5) {
-        setRecognizedText(text);
+      if (text.includes('hola santander') || text.includes('hola')) {
+        const audioFeedback = new Audio('/beep.mp3');
+        audioFeedback.play().catch(console.error);
         
-        if (text.includes('hola santander') || text.includes('hola')) {
-          const audioFeedback = new Audio('/beep.mp3');
-          audioFeedback.play().catch(console.error);
-          
-          setShowVideo(false);
-          setSelectedService(null);
-          setIsAuthenticated(false);
-          setShowWelcome(false);
-          setShowTicketPrinter(false);
-          navigate('/');
-        }
+        setShowVideo(false);
+        setSelectedService(null);
+        setIsAuthenticated(false);
+        setShowWelcome(false);
+        setShowTicketPrinter(false);
+        navigate('/');
       }
     };
 
@@ -134,7 +121,6 @@ export default function App() {
       if (event.error === 'not-allowed') {
         console.log('Permiso de micrófono denegado');
         isRecognitionActive = false;
-        alert('Por favor, permite el acceso al micrófono para usar el reconocimiento de voz');
       } else {
         // Para otros errores, intentar reiniciar
         setTimeout(() => {
@@ -157,7 +143,6 @@ export default function App() {
       try {
         recognitionInstance.stop();
         setIsListening(false);
-        audioContext.close();
       } catch (error) {
         console.error('Error al detener el reconocimiento:', error);
       }
