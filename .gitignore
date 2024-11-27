@@ -3,5 +3,6 @@ dist/
 .DS_Store
 uploads/identity-photos/*
 !uploads/identity-photos/.gitkeep
-server/uploads/fotos/*
-!server/uploads/fotos/.gitkeep
+# Permitir las fotos de referencia
+!server/uploads/fotos/
+!server/uploads/fotos/*

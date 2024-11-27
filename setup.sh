@@ -24,13 +24,23 @@ dist/
 .DS_Store
 uploads/identity-photos/*
 !uploads/identity-photos/.gitkeep
-server/uploads/fotos/*
-!server/uploads/fotos/.gitkeep
+# Permitir las fotos de referencia
+!server/uploads/fotos/
+!server/uploads/fotos/*
 EOL
 
 # Crear archivos .gitkeep
 touch uploads/identity-photos/.gitkeep
 touch server/uploads/fotos/.gitkeep
+
+# Copiar fotos de ejemplo (si existen)
+echo -e "${GREEN}Copiando fotos de referencia...${NC}"
+if [ -d "fotos_ejemplo" ]; then
+  cp fotos_ejemplo/* server/uploads/fotos/
+  echo "Fotos de ejemplo copiadas a server/uploads/fotos/"
+else
+  echo "No se encontró la carpeta fotos_ejemplo"
+fi
 
 # Descargar modelos de face-api
 echo -e "${GREEN}Descargando modelos de face-api...${NC}"
@@ -87,5 +97,5 @@ if [ ! -d .git ]; then
   echo -e "${GREEN}Inicializando repositorio git...${NC}"
   git init
   git add .
-  git commit -m "Initial commit: Proyecto Santander Totem"
+  git commit -m "Initial commit: Proyecto Santander Totem con fotos de referencia"
 fi 
