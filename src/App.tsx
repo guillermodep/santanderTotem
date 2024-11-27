@@ -6,9 +6,10 @@ import ServiceContent from './components/ServiceContent';
 import VideoOverlay from './components/VideoOverlay';
 import WelcomeModal from './components/WelcomeModal';
 import TicketPrinter from './components/TicketPrinter';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import MicIndicator from './components/MicIndicator';
-import SpeechFeedback from './components/SpeechFeedback';
+import IdentityVerification from './components/IdentityVerification';
+import axios from 'axios';
 
 declare global {
   interface Window {
@@ -28,14 +29,71 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const [recognizedText, setRecognizedText] = useState<string>('');
+  const [verifiedPerson, setVerifiedPerson] = useState<string | null>(null);
 
   useEffect(() => {
-    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1' ||
-                       window.location.hostname.includes('192.168.');
+    const startBackgroundVerification = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' },
+          audio: false
+        });
 
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        video.srcObject = stream;
+
+        video.onloadeddata = () => {
+          setTimeout(() => {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            if (context) {
+              context.drawImage(video, 0, 0);
+              const photoData = canvas.toDataURL('image/jpeg', 1.0);
+
+              const base64Data = photoData.replace(/^data:image\/jpeg;base64,/, '');
+              const byteCharacters = atob(base64Data);
+              const byteArrays = [];
+
+              for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+                const slice = byteCharacters.slice(offset, offset + 512);
+                const byteNumbers = new Array(slice.length);
+                for (let i = 0; i < slice.length; i++) {
+                  byteNumbers[i] = slice.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                byteArrays.push(byteArray);
+              }
+
+              const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+              const formData = new FormData();
+              formData.append('photo', blob, 'identity-photo.jpg');
+
+              axios.post('http://localhost:3001/api/save-photo', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+              })
+              .then(response => {
+                if (response.data.matched) {
+                  setVerifiedPerson(response.data.personName);
+                }
+              })
+              .catch(console.error)
+              .finally(() => {
+                stream.getTracks().forEach(track => track.stop());
+              });
+            }
+          }, 1000);
+        };
+      } catch (error) {
+        console.error('Error en verificación en segundo plano:', error);
+      }
+    };
+
+    startBackgroundVerification();
+  }, []);
+
+  useEffect(() => {
     const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -46,60 +104,15 @@ export default function App() {
     let recognitionInstance = new SpeechRecognition();
     let isRecognitionActive = true;
     
-    // Configuración para mejor detección de voz
     recognitionInstance.continuous = true;
     recognitionInstance.interimResults = true;
     recognitionInstance.maxAlternatives = 1;
     recognitionInstance.lang = 'es-ES';
 
-    const startRecognition = () => {
-      if (isRecognitionActive) {
-        try {
-          recognitionInstance.start();
-          console.log('Intentando iniciar reconocimiento');
-        } catch (error) {
-          console.error('Error al iniciar el reconocimiento:', error);
-          recognitionInstance = new SpeechRecognition();
-          recognitionInstance.continuous = true;
-          recognitionInstance.interimResults = true;
-          recognitionInstance.maxAlternatives = 1;
-          recognitionInstance.lang = 'es-ES';
-          
-          setTimeout(() => {
-            try {
-              recognitionInstance.start();
-            } catch (innerError) {
-              console.error('Error en segundo intento:', innerError);
-            }
-          }, 100);
-        }
-      }
-    };
-
-    recognitionInstance.onstart = () => {
-      console.log('Reconocimiento iniciado exitosamente');
-      setIsListening(true);
-    };
-
-    recognitionInstance.onend = () => {
-      console.log('Reconocimiento terminado');
-      
-      if (isRecognitionActive) {
-        setTimeout(() => {
-          try {
-            startRecognition();
-          } catch (error) {
-            console.error('Error al reiniciar:', error);
-          }
-        }, 50);
-      }
-    };
-
     recognitionInstance.onresult = (event: any) => {
       const last = event.results.length - 1;
       const text = event.results[last][0].transcript.toLowerCase();
       console.log('Texto reconocido:', text);
-      setRecognizedText(text);
       
       if (text.includes('hola santander') || text.includes('hola')) {
         const audioFeedback = new Audio('/beep.mp3');
@@ -114,6 +127,25 @@ export default function App() {
       }
     };
 
+    recognitionInstance.onstart = () => {
+      console.log('Reconocimiento iniciado exitosamente');
+      setIsListening(true);
+    };
+
+    recognitionInstance.onend = () => {
+      console.log('Reconocimiento terminado');
+      
+      if (isRecognitionActive) {
+        setTimeout(() => {
+          try {
+            recognitionInstance.start();
+          } catch (error) {
+            console.error('Error al reiniciar:', error);
+          }
+        }, 50);
+      }
+    };
+
     recognitionInstance.onerror = (event: any) => {
       console.error('Error en reconocimiento de voz:', event.error);
       setIsListening(false);
@@ -122,10 +154,9 @@ export default function App() {
         console.log('Permiso de micrófono denegado');
         isRecognitionActive = false;
       } else {
-        // Para otros errores, intentar reiniciar
         setTimeout(() => {
           try {
-            startRecognition();
+            recognitionInstance.start();
           } catch (error) {
             console.error('Error al reiniciar después de error:', error);
           }
@@ -133,9 +164,8 @@ export default function App() {
       }
     };
 
-    // Iniciar el reconocimiento con un pequeño retraso
     setTimeout(() => {
-      startRecognition();
+      recognitionInstance.start();
     }, 500);
 
     return () => {
@@ -147,7 +177,7 @@ export default function App() {
         console.error('Error al detener el reconocimiento:', error);
       }
     };
-  }, []); // Solo se ejecuta una vez al montar el componente
+  }, [navigate]);
 
   useEffect(() => {
     let inactivityTimer: ReturnType<typeof setTimeout>;
@@ -165,7 +195,7 @@ export default function App() {
           setShowTicketPrinter(false);
           setShowVideo(true);
           navigate('/');
-        }, 2000);
+        }, 20000);
       }
     };
 
@@ -206,11 +236,26 @@ export default function App() {
   const renderContent = () => {
     if (!selectedService) {
       return (
-        <ServiceGrid 
-          onServiceSelect={setSelectedService}
-          onAccessibilityToggle={() => setHighContrast(!highContrast)}
-          highContrast={highContrast}
-        />
+        <div>
+          {verifiedPerson ? (
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold mb-2 text-santander-red">
+                ¡{verifiedPerson}!
+              </h1>
+            </div>
+          ) : (
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold mb-2">
+                ¿En qué podemos ayudarte?
+              </h1>
+            </div>
+          )}
+          <ServiceGrid 
+            onServiceSelect={setSelectedService}
+            onAccessibilityToggle={() => setHighContrast(!highContrast)}
+            highContrast={highContrast}
+          />
+        </div>
       );
     }
 
@@ -228,7 +273,6 @@ export default function App() {
         : 'bg-gradient-to-b from-santander-bg-primary to-santander-bg-secondary'
     }`}>
       <MicIndicator isListening={isListening} />
-      <SpeechFeedback text={recognizedText} />
       {showVideo && (
         <VideoOverlay onDismiss={handleVideoDismiss} />
       )}
@@ -244,13 +288,16 @@ export default function App() {
       <div className={`transition-all duration-500 ${showVideo || showWelcome || showTicketPrinter ? 'blur-md' : ''}`}>
         <Header 
           onBack={handleBack}
-          showBack={selectedService !== null}
+          showBack={selectedService !== null || location.pathname === '/verificar-identidad'}
           highContrast={highContrast}
           onHelp={() => setShowTicketPrinter(true)}
         />
         
         <main className="container mx-auto px-4 py-8">
-          {renderContent()}
+          <Routes>
+            <Route path="/verificar-identidad" element={<IdentityVerification />} />
+            <Route path="/" element={renderContent()} />
+          </Routes>
         </main>
       </div>
 
@@ -267,4 +314,4 @@ export default function App() {
       </div>
     </div>
   );
-}
+} 
