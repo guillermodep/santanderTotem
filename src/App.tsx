@@ -31,6 +31,7 @@ export default function App() {
   const [recognizedText, setRecognizedText] = useState<string>('');
 
   useEffect(() => {
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
     const isLocalhost = window.location.hostname === 'localhost' || 
                        window.location.hostname === '127.0.0.1' ||
                        window.location.hostname.includes('192.168.');
@@ -45,9 +46,16 @@ export default function App() {
     let recognitionInstance = new SpeechRecognition();
     let isRecognitionActive = true;
     
-    // Configuración
-    recognitionInstance.continuous = false; // Cambiado a false
-    recognitionInstance.interimResults = false;
+    // Configuración específica para Chrome
+    if (isChrome) {
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
+    } else {
+      // Configuración para Safari y otros
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+    }
+    
     recognitionInstance.lang = 'es-ES';
 
     const startRecognition = () => {
@@ -56,6 +64,16 @@ export default function App() {
           recognitionInstance.start();
         } catch (error) {
           console.error('Error al iniciar el reconocimiento:', error);
+          // Si hay un error, intentar crear una nueva instancia
+          if (isChrome) {
+            recognitionInstance = new SpeechRecognition();
+            recognitionInstance.continuous = true;
+            recognitionInstance.interimResults = true;
+            recognitionInstance.lang = 'es-ES';
+            setTimeout(() => {
+              recognitionInstance.start();
+            }, 100);
+          }
         }
       }
     };
@@ -67,8 +85,19 @@ export default function App() {
 
     recognitionInstance.onend = () => {
       console.log('Reconocimiento terminado');
-      // Solo reiniciar si está activo
-      if (isRecognitionActive) {
+      setIsListening(false);
+      
+      // Reiniciar solo si está activo y no es Chrome
+      if (isRecognitionActive && !isChrome) {
+        setTimeout(startRecognition, 50);
+      }
+      
+      // Para Chrome, reiniciar con una nueva instancia
+      if (isChrome && isRecognitionActive) {
+        recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = true;
+        recognitionInstance.interimResults = true;
+        recognitionInstance.lang = 'es-ES';
         setTimeout(startRecognition, 50);
       }
     };
@@ -83,17 +112,17 @@ export default function App() {
         const audioFeedback = new Audio('/beep.mp3');
         audioFeedback.play().catch(console.error);
         
-        // Primero cerramos el video
         setShowVideo(false);
-        
-        // Luego reseteamos los demás estados
         setSelectedService(null);
         setIsAuthenticated(false);
         setShowWelcome(false);
         setShowTicketPrinter(false);
-        
-        // Finalmente navegamos al home
         navigate('/');
+        
+        // Para Chrome, reiniciar el reconocimiento después de procesar
+        if (isChrome) {
+          setTimeout(startRecognition, 100);
+        }
       }
     };
 
@@ -104,18 +133,14 @@ export default function App() {
         setIsListening(false);
         isRecognitionActive = false;
       } else if (event.error === 'network') {
-        // Error de red, intentar reiniciar
         setTimeout(startRecognition, 1000);
       } else {
-        // Para otros errores, pequeña pausa antes de reintentar
         setTimeout(startRecognition, 500);
       }
     };
 
-    // Iniciar el reconocimiento
     startRecognition();
 
-    // Cleanup
     return () => {
       isRecognitionActive = false;
       try {
