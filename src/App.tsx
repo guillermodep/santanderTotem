@@ -36,7 +36,7 @@ export default function App() {
                        window.location.hostname === '127.0.0.1' ||
                        window.location.hostname.includes('192.168.');
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
     
     if (!SpeechRecognition) {
       console.error('El reconocimiento de voz no está soportado en este navegador');
@@ -47,58 +47,53 @@ export default function App() {
     let isRecognitionActive = true;
     
     // Configuración específica para Chrome
-    if (isChrome) {
-      recognitionInstance.continuous = true;
-      recognitionInstance.interimResults = true;
-    } else {
-      // Configuración para Safari y otros
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
-    }
-    
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
+    recognitionInstance.maxAlternatives = 1;
     recognitionInstance.lang = 'es-ES';
 
     const startRecognition = () => {
       if (isRecognitionActive) {
         try {
           recognitionInstance.start();
+          console.log('Intentando iniciar reconocimiento');
         } catch (error) {
           console.error('Error al iniciar el reconocimiento:', error);
-          // Si hay un error, intentar crear una nueva instancia
-          if (isChrome) {
-            recognitionInstance = new SpeechRecognition();
-            recognitionInstance.continuous = true;
-            recognitionInstance.interimResults = true;
-            recognitionInstance.lang = 'es-ES';
-            setTimeout(() => {
+          // Crear nueva instancia y reintentar
+          recognitionInstance = new SpeechRecognition();
+          recognitionInstance.continuous = true;
+          recognitionInstance.interimResults = true;
+          recognitionInstance.maxAlternatives = 1;
+          recognitionInstance.lang = 'es-ES';
+          
+          setTimeout(() => {
+            try {
               recognitionInstance.start();
-            }, 100);
-          }
+            } catch (innerError) {
+              console.error('Error en segundo intento:', innerError);
+            }
+          }, 100);
         }
       }
     };
 
     recognitionInstance.onstart = () => {
-      console.log('Reconocimiento iniciado');
+      console.log('Reconocimiento iniciado exitosamente');
       setIsListening(true);
     };
 
     recognitionInstance.onend = () => {
       console.log('Reconocimiento terminado');
-      setIsListening(false);
       
-      // Reiniciar solo si está activo y no es Chrome
-      if (isRecognitionActive && !isChrome) {
-        setTimeout(startRecognition, 50);
-      }
-      
-      // Para Chrome, reiniciar con una nueva instancia
-      if (isChrome && isRecognitionActive) {
-        recognitionInstance = new SpeechRecognition();
-        recognitionInstance.continuous = true;
-        recognitionInstance.interimResults = true;
-        recognitionInstance.lang = 'es-ES';
-        setTimeout(startRecognition, 50);
+      // Reiniciar inmediatamente
+      if (isRecognitionActive) {
+        setTimeout(() => {
+          try {
+            startRecognition();
+          } catch (error) {
+            console.error('Error al reiniciar:', error);
+          }
+        }, 50);
       }
     };
 
@@ -118,28 +113,33 @@ export default function App() {
         setShowWelcome(false);
         setShowTicketPrinter(false);
         navigate('/');
-        
-        // Para Chrome, reiniciar el reconocimiento después de procesar
-        if (isChrome) {
-          setTimeout(startRecognition, 100);
-        }
       }
     };
 
     recognitionInstance.onerror = (event: any) => {
       console.error('Error en reconocimiento de voz:', event.error);
+      setIsListening(false);
       
       if (event.error === 'not-allowed') {
-        setIsListening(false);
+        console.log('Permiso de micrófono denegado');
         isRecognitionActive = false;
-      } else if (event.error === 'network') {
-        setTimeout(startRecognition, 1000);
+        alert('Por favor, permite el acceso al micrófono para usar el reconocimiento de voz');
       } else {
-        setTimeout(startRecognition, 500);
+        // Para otros errores, intentar reiniciar
+        setTimeout(() => {
+          try {
+            startRecognition();
+          } catch (error) {
+            console.error('Error al reiniciar después de error:', error);
+          }
+        }, 1000);
       }
     };
 
-    startRecognition();
+    // Iniciar el reconocimiento con un pequeño retraso
+    setTimeout(() => {
+      startRecognition();
+    }, 500);
 
     return () => {
       isRecognitionActive = false;
