@@ -46,11 +46,18 @@ export default function App() {
     let recognitionInstance = new SpeechRecognition();
     let isRecognitionActive = true;
     
-    // Configuración específica para Chrome
+    // Configuración para mejor detección de voz
     recognitionInstance.continuous = true;
     recognitionInstance.interimResults = true;
     recognitionInstance.maxAlternatives = 1;
     recognitionInstance.lang = 'es-ES';
+
+    // Ajustar la sensibilidad del reconocimiento
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    analyser.minDecibels = -45; // Aumentar este valor para reducir la sensibilidad
+    analyser.maxDecibels = -10; // Ajustar para ignorar ruidos de fondo
+    analyser.smoothingTimeConstant = 0.85;
 
     const startRecognition = () => {
       if (isRecognitionActive) {
@@ -59,7 +66,6 @@ export default function App() {
           console.log('Intentando iniciar reconocimiento');
         } catch (error) {
           console.error('Error al iniciar el reconocimiento:', error);
-          // Crear nueva instancia y reintentar
           recognitionInstance = new SpeechRecognition();
           recognitionInstance.continuous = true;
           recognitionInstance.interimResults = true;
@@ -85,7 +91,6 @@ export default function App() {
     recognitionInstance.onend = () => {
       console.log('Reconocimiento terminado');
       
-      // Reiniciar inmediatamente
       if (isRecognitionActive) {
         setTimeout(() => {
           try {
@@ -100,19 +105,25 @@ export default function App() {
     recognitionInstance.onresult = (event: any) => {
       const last = event.results.length - 1;
       const text = event.results[last][0].transcript.toLowerCase();
-      console.log('Texto reconocido:', text);
-      setRecognizedText(text);
+      const confidence = event.results[last][0].confidence;
       
-      if (text.includes('hola santander') || text.includes('hola')) {
-        const audioFeedback = new Audio('/beep.mp3');
-        audioFeedback.play().catch(console.error);
+      console.log('Texto reconocido:', text, 'Confianza:', confidence);
+      
+      // Solo procesar si la confianza es alta (ignorar ruidos de fondo)
+      if (confidence > 0.5) {
+        setRecognizedText(text);
         
-        setShowVideo(false);
-        setSelectedService(null);
-        setIsAuthenticated(false);
-        setShowWelcome(false);
-        setShowTicketPrinter(false);
-        navigate('/');
+        if (text.includes('hola santander') || text.includes('hola')) {
+          const audioFeedback = new Audio('/beep.mp3');
+          audioFeedback.play().catch(console.error);
+          
+          setShowVideo(false);
+          setSelectedService(null);
+          setIsAuthenticated(false);
+          setShowWelcome(false);
+          setShowTicketPrinter(false);
+          navigate('/');
+        }
       }
     };
 
@@ -146,6 +157,7 @@ export default function App() {
       try {
         recognitionInstance.stop();
         setIsListening(false);
+        audioContext.close();
       } catch (error) {
         console.error('Error al detener el reconocimiento:', error);
       }
