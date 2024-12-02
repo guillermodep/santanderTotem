@@ -10,6 +10,7 @@ import { useNavigate, useLocation, Routes, Route } from 'react-router-dom';
 import MicIndicator from './components/MicIndicator';
 import IdentityVerification from './components/IdentityVerification';
 import axios from 'axios';
+import CardPrinting from './components/CardPrinting';
 
 declare global {
   interface Window {
@@ -30,6 +31,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const [verifiedPerson, setVerifiedPerson] = useState<string | null>(null);
+  const [showCardPrinting, setShowCardPrinting] = useState(false);
 
   useEffect(() => {
     const startBackgroundVerification = async () => {
@@ -284,8 +286,12 @@ export default function App() {
       {showTicketPrinter && (
         <TicketPrinter onClose={() => setShowTicketPrinter(false)} />
       )}
+
+      {showCardPrinting && (
+        <CardPrinting onClose={() => setShowCardPrinting(false)} />
+      )}
       
-      <div className={`transition-all duration-500 ${showVideo || showWelcome || showTicketPrinter ? 'blur-md' : ''}`}>
+      <div className={`transition-all duration-500 ${showVideo || showWelcome || showTicketPrinter || showCardPrinting ? 'blur-md' : ''}`}>
         <Header 
           onBack={handleBack}
           showBack={selectedService !== null || location.pathname === '/verificar-identidad'}

@@ -1,3 +1,4 @@
+import './apm';  // Importar APM al inicio del archivo
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
@@ -12,6 +13,12 @@ const __dirname = dirname(__filename);
 
 const app = express();
 app.use(cors());
+
+// Agregar middleware de APM después de crear la app
+app.use((req, res, next) => {
+  res.apm = apm;
+  next();
+});
 
 // Crear las carpetas necesarias
 const uploadDir = path.join(__dirname, '../../uploads/identity-photos');

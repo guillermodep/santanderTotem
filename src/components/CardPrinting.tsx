@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Printer } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
-interface TicketPrinterProps {
+interface CardPrintingProps {
   onClose: () => void;
 }
 
-export default function TicketPrinter({ onClose }: TicketPrinterProps) {
+export default function CardPrinting({ onClose }: CardPrintingProps) {
   const [isPrinting, setIsPrinting] = useState(true);
-  const [ticketNumber] = useState(`A${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`);
   const [showPrinterLight, setShowPrinterLight] = useState(true);
 
   useEffect(() => {
-    // Blinking printer light effect
+    // Efecto de luz parpadeante de la impresora
     const blinkInterval = setInterval(() => {
       setShowPrinterLight(prev => !prev);
     }, 500);
 
-    // Start printing animation after a brief delay
+    // Iniciar animación de impresión después de un breve retraso
     const printTimer = setTimeout(() => {
       setIsPrinting(false);
     }, 2000);
@@ -32,36 +31,35 @@ export default function TicketPrinter({ onClose }: TicketPrinterProps) {
       <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full mx-4">
         <div className="text-center">
           <div className="relative mb-8">
-            {/* Printer Device */}
+            {/* Impresora */}
             <div className="w-64 h-32 bg-gradient-to-b from-gray-800 to-gray-900 rounded-lg mx-auto relative overflow-visible">
-              {/* Printer Details */}
+              {/* Luces de la impresora */}
               <div className="absolute top-2 right-2 flex gap-2">
                 <div className={`w-2 h-2 rounded-full ${showPrinterLight ? 'bg-green-400' : 'bg-green-800'} 
                   transition-colors duration-200`}></div>
                 <div className="w-2 h-2 rounded-full bg-gray-600"></div>
               </div>
               
-              {/* Printer Slot */}
+              {/* Ranura de la impresora */}
               <div className="absolute top-6 left-0 right-0 h-1.5 bg-gray-700">
                 <div className="absolute inset-0 bg-gradient-to-r from-gray-700 via-gray-600 to-gray-700"></div>
               </div>
               
-              {/* Printer Front Panel */}
+              {/* Panel frontal */}
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 
                 border-t border-gray-600"></div>
               
-              {/* Ticket */}
+              {/* Tarjeta */}
               <div className={`absolute top-6 left-1/2 -translate-x-1/2 w-48 transform
                 transition-transform duration-1000 ease-out
                 ${isPrinting ? 'translate-y-0' : '-translate-y-32'}`}>
-                <div className="bg-white p-4 rounded shadow-lg border border-gray-200">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 rounded-lg shadow-lg">
                   <div className="text-center">
                     <div className="flex justify-center mb-2">
-                      <Printer className="w-8 h-8 text-santander-red" />
+                      <CreditCard className="w-8 h-8 text-white" />
                     </div>
-                    <div className="text-2xl font-bold text-santander-red mb-1">{ticketNumber}</div>
-                    <div className="text-sm text-gray-500">Atención en caja</div>
-                    <div className="mt-2 pt-2 border-t border-dashed border-gray-200 text-xs text-gray-400">
+                    <div className="text-sm text-white font-medium">Tarjeta Santander</div>
+                    <div className="mt-2 pt-2 border-t border-red-500/30 text-xs text-white/70">
                       {new Date().toLocaleDateString()}
                     </div>
                   </div>
@@ -70,9 +68,8 @@ export default function TicketPrinter({ onClose }: TicketPrinterProps) {
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold mb-4">Su número de atención</h2>
-          <div className="text-5xl font-bold text-santander-red mb-6">{ticketNumber}</div>
-          <p className="text-gray-600 mb-6">Por favor, espere a ser llamado por pantalla</p>
+          <h2 className="text-2xl font-bold mb-4">Imprimiendo su tarjeta</h2>
+          <p className="text-gray-600 mb-6">Por favor, espere mientras se imprime su tarjeta</p>
           
           <button
             onClick={onClose}
@@ -85,4 +82,4 @@ export default function TicketPrinter({ onClose }: TicketPrinterProps) {
       </div>
     </div>
   );
-}
+} 
